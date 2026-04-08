@@ -32,6 +32,23 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Copy
+      if (e.key === 'c' && (e.ctrlKey || e.metaKey)) {
+        if (store.selectedIds.length > 0) {
+          e.preventDefault();
+          store.copyToClipboard();
+        }
+        return;
+      }
+
+      // Paste
+      if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        store.pasteFromClipboard();
+        return;
+      }
+
+      // Duplicate
       if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         if (store.selectedIds.length > 0) {
@@ -40,15 +57,32 @@ export function useKeyboardShortcuts() {
         return;
       }
 
+      // Redo (before undo check)
       if (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
         e.preventDefault();
         store.redo();
         return;
       }
 
+      // Undo
       if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         store.undo();
+        return;
+      }
+
+      // Lock/Unlock
+      if (e.key === 'l' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (store.selectedIds.length > 0) {
+          const objs = store.objects.filter((o) => store.selectedIds.includes(o.id));
+          const anyLocked = objs.some((o) => o.locked);
+          if (anyLocked) {
+            store.unlockObjects(store.selectedIds);
+          } else {
+            store.lockObjects(store.selectedIds);
+          }
+        }
         return;
       }
 
@@ -63,6 +97,7 @@ export function useKeyboardShortcuts() {
       if (e.key === 'Escape') {
         store.clearSelection();
         store.setTool('select');
+        if (store.walkthrough) store.setWalkthrough(false);
         return;
       }
 

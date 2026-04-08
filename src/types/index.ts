@@ -13,6 +13,8 @@ export interface WarehouseObject {
   color: string;
   label?: string;
   metadata?: Record<string, any>;
+  locked?: boolean;
+  layer?: string;
 }
 
 export type Tool = 'select' | 'wall' | 'rack' | 'pallet' | 'zone' | 'column' | 'door' | 'dock' | 'measure';
@@ -27,4 +29,20 @@ export interface ObjectDefaults {
   color: string;
   label?: string;
   metadata?: Record<string, any>;
+}
+
+export interface Annotation {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+}
+
+export interface WalkthroughCamera {
+  x: number;
+  y: number;
+  z: number;
+  rotationY: number;
+  pitch: number;
 }

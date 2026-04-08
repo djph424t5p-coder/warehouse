@@ -3,12 +3,25 @@ import { useStore } from '../../store/useStore';
 import { screenToWorld } from '../../utils/coordinates';
 import { snapPosition } from '../../utils/snap';
 import { pointInObject, objectsInRect, getResizeHandleAtPoint, type ResizeHandle } from '../../utils/hitTest';
-import { createObject } from '../../utils/defaults';
+import { createObject, OBJECT_DEFAULTS } from '../../utils/defaults';
+import { getAllCollisions } from '../../utils/collision';
 import { ContextMenu } from '../ui/ContextMenu';
 import type { ObjectType, WarehouseObject } from '../../types';
 
 const MIN_ZOOM = 5;
 const MAX_ZOOM = 200;
+
+const CURSOR_MAP: Record<string, string> = {
+  select: 'default',
+  wall: 'crosshair',
+  rack: 'copy',
+  pallet: 'copy',
+  zone: 'copy',
+  column: 'copy',
+  door: 'copy',
+  dock: 'copy',
+  measure: 'crosshair',
+};
 
 interface DragState {
   type: 'none' | 'pan' | 'move' | 'select-box' | 'wall-draw' | 'resize';
@@ -25,11 +38,12 @@ export const Canvas2D: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState({ x: 400, y: 300 });
-  const [zoom, setZoom] = useState(40); // pixels per meter
+  const [zoom, setZoom] = useState(40);
   const dragRef = useRef<DragState>({ type: 'none', startScreen: { x: 0, y: 0 }, startWorld: { x: 0, y: 0 } });
   const [selectionBox, setSelectionBox] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [wallPreview, setWallPreview] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
 
   const objects = useStore((s) => s.objects);
   const selectedIds = useStore((s) => s.selectedIds);
@@ -37,8 +51,10 @@ export const Canvas2D: React.FC = () => {
   const gridSize = useStore((s) => s.gridSize);
   const _snap = useStore((s) => s.snapToGrid);
   const measurePoints = useStore((s) => s.measurePoints);
+  const annotations = useStore((s) => s.annotations);
+  const showCollisions = useStore((s) => s.showCollisions);
+  const layers = useStore((s) => s.layers);
 
-  // _tool and _snap trigger re-renders when changed (used in callbacks via getState)
   void _tool;
   void _snap;
 
@@ -62,14 +78,12 @@ export const Canvas2D: React.FC = () => {
     const w = rect.width;
     const h = rect.height;
 
-    // Clear
     ctx.fillStyle = '#f8f8f8';
     ctx.fillRect(0, 0, w, h);
 
     // Grid
-    ctx.save();
     const gridPx = gridSize * zoom;
-    const majorEvery = gridSize <= 0.5 ? 10 : gridSize <= 1 ? 5 : 5;
+    const majorEvery = gridSize <= 0.5 ? 10 : 5;
 
     if (gridPx > 4) {
       const startWx = Math.floor(-offset.x / zoom / gridSize) * gridSize;
@@ -111,20 +125,38 @@ export const Canvas2D: React.FC = () => {
     ctx.moveTo(0, offset.y);
     ctx.lineTo(w, offset.y);
     ctx.stroke();
-    ctx.restore();
 
-    // Objects
+    // Collision set
+    const visibleLayers = new Set(layers.filter((l) => l.visible).map((l) => l.name));
+    const visibleObjects = objects.filter((o) => visibleLayers.has(o.layer || 'default'));
+    const collisionSet = showCollisions ? getAllCollisions(visibleObjects) : new Set<string>();
     const selectedSet = new Set(selectedIds);
 
-    // Draw zones first (below everything)
-    const zones = objects.filter((o) => o.type === 'zone');
-    const nonZones = objects.filter((o) => o.type !== 'zone');
+    // Draw objects: zones first, then rest
+    const zones = visibleObjects.filter((o) => o.type === 'zone');
+    const nonZones = visibleObjects.filter((o) => o.type !== 'zone');
 
     for (const obj of zones) {
-      drawObject(ctx, obj, offset, zoom, selectedSet.has(obj.id));
+      drawObject(ctx, obj, offset, zoom, selectedSet.has(obj.id), collisionSet.has(obj.id));
     }
     for (const obj of nonZones) {
-      drawObject(ctx, obj, offset, zoom, selectedSet.has(obj.id));
+      drawObject(ctx, obj, offset, zoom, selectedSet.has(obj.id), collisionSet.has(obj.id));
+    }
+
+    // Ghost preview
+    const store = useStore.getState();
+    if (ghostPos && store.tool !== 'select' && store.tool !== 'measure' && store.tool !== 'wall') {
+      const defaults = OBJECT_DEFAULTS[store.tool as ObjectType];
+      if (defaults) {
+        const snapped = snapPosition(ghostPos.x, ghostPos.y, store.gridSize, store.snapToGrid);
+        const ghostObj: WarehouseObject = {
+          id: 'ghost', type: store.tool as ObjectType,
+          x: snapped.x, y: snapped.y, z: 0,
+          width: defaults.width, depth: defaults.depth, height: defaults.height,
+          rotation: 0, color: defaults.color,
+        };
+        drawGhost(ctx, ghostObj, offset, zoom);
+      }
     }
 
     // Selection box
@@ -132,32 +164,26 @@ export const Canvas2D: React.FC = () => {
       const { x1, y1, x2, y2 } = selectionBox;
       const sx1 = x1 * zoom + offset.x;
       const sy1 = y1 * zoom + offset.y;
-      const sw = (x2 - x1) * zoom;
-      const sh = (y2 - y1) * zoom;
       ctx.fillStyle = 'rgba(66, 133, 244, 0.1)';
       ctx.strokeStyle = 'rgba(66, 133, 244, 0.6)';
       ctx.lineWidth = 1;
-      ctx.fillRect(sx1, sy1, sw, sh);
-      ctx.strokeRect(sx1, sy1, sw, sh);
+      ctx.fillRect(sx1, sy1, (x2 - x1) * zoom, (y2 - y1) * zoom);
+      ctx.strokeRect(sx1, sy1, (x2 - x1) * zoom, (y2 - y1) * zoom);
     }
 
     // Wall preview
     if (wallPreview) {
       const { x1, y1, x2, y2 } = wallPreview;
-      const sx1 = x1 * zoom + offset.x;
-      const sy1 = y1 * zoom + offset.y;
-      const sx2 = x2 * zoom + offset.x;
-      const sy2 = y2 * zoom + offset.y;
       ctx.strokeStyle = '#888888aa';
       ctx.lineWidth = 0.2 * zoom;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(sx1, sy1);
-      ctx.lineTo(sx2, sy2);
+      ctx.moveTo(x1 * zoom + offset.x, y1 * zoom + offset.y);
+      ctx.lineTo(x2 * zoom + offset.x, y2 * zoom + offset.y);
       ctx.stroke();
     }
 
-    // Measure points & line
+    // Measure points
     if (measurePoints.length > 0) {
       for (const mp of measurePoints) {
         const sx = mp.x * zoom + offset.x;
@@ -183,27 +209,42 @@ export const Canvas2D: React.FC = () => {
         ctx.setLineDash([]);
 
         const dist = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
-        const mx = (sx1 + sx2) / 2;
-        const my = (sy1 + sy2) / 2;
         ctx.fillStyle = '#ff4444';
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${dist.toFixed(2)}м`, mx, my - 8);
+        ctx.fillText(`${dist.toFixed(2)}м`, (sx1 + sx2) / 2, (sy1 + sy2) / 2 - 8);
       }
     }
-  }, [objects, selectedIds, offset, zoom, gridSize, selectionBox, wallPreview, measurePoints]);
 
-  // Resize canvas on window resize
+    // Annotations
+    for (const ann of annotations) {
+      const sx = ann.x * zoom + offset.x;
+      const sy = ann.y * zoom + offset.y;
+      ctx.fillStyle = ann.color || '#ff6600';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('!', sx, sy);
+      if (ann.text) {
+        ctx.fillStyle = '#333';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(ann.text, sx + 10, sy - 6);
+      }
+    }
+
+    // Ruler overlay
+    drawRulers(ctx, w, h, offset, zoom);
+  }, [objects, selectedIds, offset, zoom, gridSize, selectionBox, wallPreview, measurePoints, ghostPos, annotations, showCollisions, layers]);
+
+  // Resize
   useEffect(() => {
     const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (rect) {
-        canvas.style.width = `${rect.width}px`;
-        canvas.style.height = `${rect.height}px`;
-      }
-      // Trigger a redraw via a no-op state change
       setOffset((o) => ({ ...o }));
     };
     window.addEventListener('resize', handleResize);
@@ -217,10 +258,8 @@ export const Canvas2D: React.FC = () => {
       if (!rect) return;
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-
       const factor = e.deltaY < 0 ? 1.1 : 0.9;
       const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
-
       setOffset({
         x: mx - (mx - offset.x) * (newZoom / zoom),
         y: my - (my - offset.y) * (newZoom / zoom),
@@ -234,7 +273,6 @@ export const Canvas2D: React.FC = () => {
     (e: React.MouseEvent) => {
       setContextMenu(null);
 
-      // Right-click: start panning
       if (e.button === 2) {
         e.preventDefault();
         const rect = canvasRef.current?.getBoundingClientRect();
@@ -253,7 +291,6 @@ export const Canvas2D: React.FC = () => {
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
       const world = toWorld(sx, sy);
-
       const store = useStore.getState();
 
       if (store.tool === 'measure') {
@@ -273,7 +310,6 @@ export const Canvas2D: React.FC = () => {
         return;
       }
 
-      // Placement tools
       if (store.tool !== 'select') {
         const snapped = snapPosition(world.x, world.y, store.gridSize, store.snapToGrid);
         const obj = createObject(store.tool as ObjectType, snapped.x, snapped.y);
@@ -283,26 +319,21 @@ export const Canvas2D: React.FC = () => {
       }
 
       // Select tool
-      // Check for resize handles on selected objects
       for (const id of store.selectedIds) {
         const obj = store.objects.find((o) => o.id === id);
-        if (obj) {
+        if (obj && !obj.locked) {
           const handleSizeWorld = 6 / zoom;
           const handle = getResizeHandleAtPoint(world.x, world.y, obj, handleSizeWorld);
           if (handle) {
             dragRef.current = {
-              type: 'resize',
-              startScreen: { x: sx, y: sy },
-              startWorld: world,
-              resizeHandle: handle,
-              resizeObj: { ...obj },
+              type: 'resize', startScreen: { x: sx, y: sy }, startWorld: world,
+              resizeHandle: handle, resizeObj: { ...obj },
             };
             return;
           }
         }
       }
 
-      // Check for hit on object
       const hitObj = [...store.objects].reverse().find((o) => pointInObject(world.x, world.y, o));
 
       if (hitObj) {
@@ -311,30 +342,24 @@ export const Canvas2D: React.FC = () => {
         } else if (!store.selectedIds.includes(hitObj.id)) {
           store.setSelectedIds([hitObj.id]);
         }
-        // Start move
-        const currentSelected = e.shiftKey
-          ? useStore.getState().selectedIds
-          : store.selectedIds.includes(hitObj.id)
-          ? store.selectedIds
-          : [hitObj.id];
-        const origPositions = store.objects
-          .filter((o) => currentSelected.includes(o.id))
-          .map((o) => ({ id: o.id, x: o.x, y: o.y }));
-
-        dragRef.current = {
-          type: 'move',
-          startScreen: { x: sx, y: sy },
-          startWorld: world,
-          origPositions,
-          shiftConstrain: null,
-        };
+        if (!hitObj.locked) {
+          const currentSelected = e.shiftKey
+            ? useStore.getState().selectedIds
+            : store.selectedIds.includes(hitObj.id)
+            ? store.selectedIds
+            : [hitObj.id];
+          const origPositions = store.objects
+            .filter((o) => currentSelected.includes(o.id) && !o.locked)
+            .map((o) => ({ id: o.id, x: o.x, y: o.y }));
+          dragRef.current = {
+            type: 'move', startScreen: { x: sx, y: sy }, startWorld: world,
+            origPositions, shiftConstrain: null,
+          };
+        }
       } else {
-        // Start selection box
         if (!e.shiftKey) store.clearSelection();
         dragRef.current = {
-          type: 'select-box',
-          startScreen: { x: sx, y: sy },
-          startWorld: world,
+          type: 'select-box', startScreen: { x: sx, y: sy }, startWorld: world,
         };
       }
     },
@@ -351,27 +376,28 @@ export const Canvas2D: React.FC = () => {
 
       useStore.getState().setCursorPos({ x: Math.round(world.x * 10) / 10, y: Math.round(world.y * 10) / 10 });
 
+      // Ghost preview position
+      const store = useStore.getState();
+      if (store.tool !== 'select' && store.tool !== 'measure' && store.tool !== 'wall' && dragRef.current.type === 'none') {
+        setGhostPos(world);
+      } else if (ghostPos !== null && (store.tool === 'select' || store.tool === 'measure')) {
+        setGhostPos(null);
+      }
+
       const drag = dragRef.current;
 
       if (drag.type === 'pan') {
         const dx = sx - drag.startScreen.x;
         const dy = sy - drag.startScreen.y;
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-          drag.rightClickMoved = true;
-        }
-        setOffset({
-          x: offset.x + dx,
-          y: offset.y + dy,
-        });
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) drag.rightClickMoved = true;
+        setOffset({ x: offset.x + dx, y: offset.y + dy });
         drag.startScreen = { x: sx, y: sy };
         return;
       }
 
       if (drag.type === 'move' && drag.origPositions) {
-        const store = useStore.getState();
         let dx = world.x - drag.startWorld.x;
         let dy = world.y - drag.startWorld.y;
-
         if (e.shiftKey) {
           if (!drag.shiftConstrain) {
             if (Math.abs(dx) > Math.abs(dy)) drag.shiftConstrain = 'x';
@@ -387,8 +413,6 @@ export const Canvas2D: React.FC = () => {
           const newPos = snapPosition(op.x + dx, op.y + dy, store.gridSize, store.snapToGrid);
           return { id: op.id, changes: { x: newPos.x, y: newPos.y } };
         });
-
-        // Direct update without snapshot to avoid spamming history
         const updateMap = new Map(updates.map((u) => [u.id, u.changes]));
         const newObjects = store.objects.map((o) => {
           const changes = updateMap.get(o.id);
@@ -399,89 +423,49 @@ export const Canvas2D: React.FC = () => {
       }
 
       if (drag.type === 'resize' && drag.resizeObj && drag.resizeHandle) {
-        const store = useStore.getState();
         const obj = drag.resizeObj;
         const rad = (-obj.rotation * Math.PI) / 180;
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
-
         const dwx = world.x - drag.startWorld.x;
         const dwy = world.y - drag.startWorld.y;
         const localDx = dwx * cos - dwy * sin;
         const localDy = dwx * sin + dwy * cos;
 
-        let newWidth = obj.width;
-        let newDepth = obj.depth;
-        let newX = obj.x;
-        let newY = obj.y;
-
+        let newWidth = obj.width, newDepth = obj.depth, newX = obj.x, newY = obj.y;
         const h = drag.resizeHandle;
-        if (h.includes('right')) {
-          newWidth = Math.max(0.1, obj.width + localDx);
-          const shift = (newWidth - obj.width) / 2;
-          newX += shift * Math.cos(-rad);
-          newY -= shift * Math.sin(-rad);
-        }
-        if (h.includes('left')) {
-          newWidth = Math.max(0.1, obj.width - localDx);
-          const shift = (newWidth - obj.width) / 2;
-          newX -= shift * Math.cos(-rad);
-          newY += shift * Math.sin(-rad);
-        }
-        if (h.includes('bottom')) {
-          newDepth = Math.max(0.1, obj.depth + localDy);
-          const shift = (newDepth - obj.depth) / 2;
-          newX += shift * Math.sin(rad);
-          newY += shift * Math.cos(rad);
-        }
-        if (h.includes('top')) {
-          newDepth = Math.max(0.1, obj.depth - localDy);
-          const shift = (newDepth - obj.depth) / 2;
-          newX -= shift * Math.sin(rad);
-          newY -= shift * Math.cos(rad);
-        }
+        if (h.includes('right')) { newWidth = Math.max(0.1, obj.width + localDx); const s = (newWidth - obj.width) / 2; newX += s * Math.cos(-rad); newY -= s * Math.sin(-rad); }
+        if (h.includes('left')) { newWidth = Math.max(0.1, obj.width - localDx); const s = (newWidth - obj.width) / 2; newX -= s * Math.cos(-rad); newY += s * Math.sin(-rad); }
+        if (h.includes('bottom')) { newDepth = Math.max(0.1, obj.depth + localDy); const s = (newDepth - obj.depth) / 2; newX += s * Math.sin(rad); newY += s * Math.cos(rad); }
+        if (h.includes('top')) { newDepth = Math.max(0.1, obj.depth - localDy); const s = (newDepth - obj.depth) / 2; newX -= s * Math.sin(rad); newY -= s * Math.cos(rad); }
 
         const snapped = snapPosition(newX, newY, store.gridSize, store.snapToGrid);
         const newObjects = store.objects.map((o) =>
-          o.id === obj.id
-            ? { ...o, x: snapped.x, y: snapped.y, width: Math.round(newWidth * 10) / 10, depth: Math.round(newDepth * 10) / 10 }
-            : o
+          o.id === obj.id ? { ...o, x: snapped.x, y: snapped.y, width: Math.round(newWidth * 10) / 10, depth: Math.round(newDepth * 10) / 10 } : o
         );
         useStore.setState({ objects: newObjects });
         return;
       }
 
       if (drag.type === 'select-box') {
-        setSelectionBox({
-          x1: drag.startWorld.x,
-          y1: drag.startWorld.y,
-          x2: world.x,
-          y2: world.y,
-        });
+        setSelectionBox({ x1: drag.startWorld.x, y1: drag.startWorld.y, x2: world.x, y2: world.y });
         return;
       }
 
       if (drag.type === 'wall-draw') {
-        const snapped = snapPosition(world.x, world.y, useStore.getState().gridSize, useStore.getState().snapToGrid);
-        setWallPreview({
-          x1: drag.startWorld.x,
-          y1: drag.startWorld.y,
-          x2: snapped.x,
-          y2: snapped.y,
-        });
+        const snapped = snapPosition(world.x, world.y, store.gridSize, store.snapToGrid);
+        setWallPreview({ x1: drag.startWorld.x, y1: drag.startWorld.y, x2: snapped.x, y2: snapped.y });
         return;
       }
     },
-    [toWorld, offset, zoom]
+    [toWorld, offset, zoom, ghostPos]
   );
 
   const handleMouseUp = useCallback(() => {
     const drag = dragRef.current;
 
     if (drag.type === 'move' && drag.origPositions) {
-      // Save a single snapshot for the entire move
       const store = useStore.getState();
-      // We need to push a manual snapshot with the original state
       const history = [...store.history, store.objects.map((o) => {
         const orig = drag.origPositions!.find((op) => op.id === o.id);
         return orig ? { ...o, x: orig.x, y: orig.y } : o;
@@ -501,13 +485,7 @@ export const Canvas2D: React.FC = () => {
 
     if (drag.type === 'select-box' && selectionBox) {
       const store = useStore.getState();
-      const ids = objectsInRect(
-        store.objects,
-        selectionBox.x1,
-        selectionBox.y1,
-        selectionBox.x2,
-        selectionBox.y2
-      );
+      const ids = objectsInRect(store.objects, selectionBox.x1, selectionBox.y1, selectionBox.x2, selectionBox.y2);
       store.setSelectedIds(ids);
       setSelectionBox(null);
     }
@@ -519,10 +497,7 @@ export const Canvas2D: React.FC = () => {
         const cx = (x1 + x2) / 2;
         const cy = (y1 + y2) / 2;
         const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI - 90;
-        const wall = createObject('wall', cx, cy, {
-          depth: Math.round(len * 10) / 10,
-          rotation: angle,
-        });
+        const wall = createObject('wall', cx, cy, { depth: Math.round(len * 10) / 10, rotation: angle });
         const store = useStore.getState();
         store.addObject(wall);
         store.setSelectedIds([wall.id]);
@@ -537,8 +512,6 @@ export const Canvas2D: React.FC = () => {
     (e: React.MouseEvent) => {
       e.preventDefault();
       const drag = dragRef.current;
-
-      // If we were panning with right-click, don't show context menu
       if (drag.type === 'pan' && drag.rightClickMoved) {
         dragRef.current = { type: 'none', startScreen: { x: 0, y: 0 }, startWorld: { x: 0, y: 0 } };
         return;
@@ -549,20 +522,19 @@ export const Canvas2D: React.FC = () => {
       if (!rect) return;
       const world = toWorld(e.clientX - rect.left, e.clientY - rect.top);
       const store = useStore.getState();
-
       const hitObj = [...store.objects].reverse().find((o) => pointInObject(world.x, world.y, o));
       if (hitObj) {
-        if (!store.selectedIds.includes(hitObj.id)) {
-          store.setSelectedIds([hitObj.id]);
-        }
+        if (!store.selectedIds.includes(hitObj.id)) store.setSelectedIds([hitObj.id]);
         setContextMenu({ x: e.clientX, y: e.clientY });
       }
     },
     [toWorld]
   );
 
+  const cursorStyle = CURSOR_MAP[useStore.getState().tool] || 'default';
+
   return (
-    <div ref={containerRef} className="flex-1 relative overflow-hidden cursor-crosshair">
+    <div ref={containerRef} className="flex-1 relative overflow-hidden" style={{ cursor: cursorStyle }}>
       <canvas
         ref={canvasRef}
         className="w-full h-full block"
@@ -594,11 +566,8 @@ export const Canvas2D: React.FC = () => {
 };
 
 function drawObject(
-  ctx: CanvasRenderingContext2D,
-  obj: WarehouseObject,
-  offset: { x: number; y: number },
-  zoom: number,
-  selected: boolean
+  ctx: CanvasRenderingContext2D, obj: WarehouseObject,
+  offset: { x: number; y: number }, zoom: number, selected: boolean, colliding: boolean
 ) {
   const cx = obj.x * zoom + offset.x;
   const cy = obj.y * zoom + offset.y;
@@ -610,7 +579,6 @@ function drawObject(
   ctx.translate(cx, cy);
   ctx.rotate(rad);
 
-  // Fill
   if (obj.type === 'zone') {
     const hex = obj.color;
     const r = parseInt(hex.slice(1, 3), 16);
@@ -622,22 +590,34 @@ function drawObject(
   }
   ctx.fillRect(-w / 2, -d / 2, w, d);
 
-  // Stroke
+  // Collision highlight
+  if (colliding) {
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 3]);
+    ctx.strokeRect(-w / 2, -d / 2, w, d);
+    ctx.setLineDash([]);
+  }
+
   ctx.strokeStyle = selected ? '#2196F3' : '#00000044';
   ctx.lineWidth = selected ? 2 : 1;
   ctx.strokeRect(-w / 2, -d / 2, w, d);
 
+  // Lock indicator
+  if (obj.locked) {
+    ctx.fillStyle = '#ff880088';
+    ctx.fillRect(-w / 2, -d / 2, w, d);
+  }
+
   // Label
   if (obj.label || obj.type === 'zone') {
-    const label = obj.label || '';
     ctx.fillStyle = '#333';
     ctx.font = `${Math.max(10, Math.min(14, w * 0.2))}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, 0, 0, w - 4);
+    ctx.fillText(obj.label || '', 0, 0, w - 4);
   }
 
-  // Type indicator for non-zone objects without label
   if (!obj.label && obj.type !== 'zone') {
     const short = obj.type.charAt(0).toUpperCase();
     ctx.fillStyle = '#fff';
@@ -647,16 +627,13 @@ function drawObject(
     ctx.fillText(short, 0, 0);
   }
 
-  // Resize handles for selected
   if (selected) {
     const hs = 5;
     ctx.fillStyle = '#2196F3';
-    // Corners
     ctx.fillRect(-w / 2 - hs, -d / 2 - hs, hs * 2, hs * 2);
     ctx.fillRect(w / 2 - hs, -d / 2 - hs, hs * 2, hs * 2);
     ctx.fillRect(-w / 2 - hs, d / 2 - hs, hs * 2, hs * 2);
     ctx.fillRect(w / 2 - hs, d / 2 - hs, hs * 2, hs * 2);
-    // Edge midpoints
     ctx.fillRect(-hs, -d / 2 - hs, hs * 2, hs * 2);
     ctx.fillRect(-hs, d / 2 - hs, hs * 2, hs * 2);
     ctx.fillRect(-w / 2 - hs, -hs, hs * 2, hs * 2);
@@ -664,4 +641,95 @@ function drawObject(
   }
 
   ctx.restore();
+}
+
+function drawGhost(
+  ctx: CanvasRenderingContext2D, obj: WarehouseObject,
+  offset: { x: number; y: number }, zoom: number
+) {
+  const cx = obj.x * zoom + offset.x;
+  const cy = obj.y * zoom + offset.y;
+  const w = obj.width * zoom;
+  const d = obj.depth * zoom;
+
+  ctx.save();
+  ctx.globalAlpha = 0.35;
+  ctx.translate(cx, cy);
+  ctx.fillStyle = obj.color;
+  ctx.fillRect(-w / 2, -d / 2, w, d);
+  ctx.strokeStyle = '#2196F3';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.strokeRect(-w / 2, -d / 2, w, d);
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawRulers(
+  ctx: CanvasRenderingContext2D, w: number, h: number,
+  offset: { x: number; y: number }, zoom: number
+) {
+  const rulerH = 20;
+
+  // Top ruler
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(0, 0, w, rulerH);
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, rulerH);
+  ctx.lineTo(w, rulerH);
+  ctx.stroke();
+
+  // Left ruler
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(0, 0, rulerH, h);
+  ctx.beginPath();
+  ctx.moveTo(rulerH, 0);
+  ctx.lineTo(rulerH, h);
+  ctx.stroke();
+
+  ctx.fillStyle = '#888';
+  ctx.font = '9px sans-serif';
+
+  // Horizontal marks
+  const step = zoom >= 20 ? 1 : zoom >= 10 ? 2 : 5;
+  const startM = Math.floor(-offset.x / zoom / step) * step;
+  const endM = Math.ceil((w - offset.x) / zoom / step) * step;
+  for (let m = startM; m <= endM; m += step) {
+    const sx = m * zoom + offset.x;
+    if (sx < rulerH || sx > w) continue;
+    ctx.beginPath();
+    ctx.moveTo(sx, rulerH - 6);
+    ctx.lineTo(sx, rulerH);
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${m}`, sx, rulerH - 6);
+  }
+
+  // Vertical marks
+  const startMy = Math.floor(-offset.y / zoom / step) * step;
+  const endMy = Math.ceil((h - offset.y) / zoom / step) * step;
+  for (let m = startMy; m <= endMy; m += step) {
+    const sy = m * zoom + offset.y;
+    if (sy < rulerH || sy > h) continue;
+    ctx.beginPath();
+    ctx.moveTo(rulerH - 6, sy);
+    ctx.lineTo(rulerH, sy);
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(rulerH - 7, sy);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${m}`, 0, 0);
+    ctx.restore();
+  }
+
+  // Corner box
+  ctx.fillStyle = '#f0f0f0';
+  ctx.fillRect(0, 0, rulerH, rulerH);
+  ctx.strokeStyle = '#ccc';
+  ctx.strokeRect(0, 0, rulerH, rulerH);
 }

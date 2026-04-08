@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Header } from './components/ui/Header';
 import { LeftSidebar } from './components/ui/LeftSidebar';
 import { PropertiesPanel } from './components/ui/PropertiesPanel';
@@ -10,6 +11,23 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 function App() {
   const mode = useStore((s) => s.mode);
   useKeyboardShortcuts();
+
+  // Load from share link on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const state = params.get('state');
+    if (state) {
+      try {
+        const data = JSON.parse(decodeURIComponent(atob(state)));
+        if (Array.isArray(data)) {
+          useStore.getState().loadState(data);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } catch {
+        // Invalid share link, ignore
+      }
+    }
+  }, []);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden">

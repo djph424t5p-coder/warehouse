@@ -5,6 +5,8 @@ import { computeStats } from '../../utils/stats';
 export const Footer: React.FC = React.memo(() => {
   const cursorPos = useStore((s) => s.cursorPos);
   const objects = useStore((s) => s.objects);
+  const history = useStore((s) => s.history);
+  const future = useStore((s) => s.future);
   const stats = React.useMemo(() => computeStats(objects), [objects]);
 
   return (
@@ -19,6 +21,9 @@ export const Footer: React.FC = React.memo(() => {
       <span>Площадь: {stats.area}м²</span>
       <span>Паллетомест: {stats.rackSlots}</span>
       <span>Паллет: {stats.palletPositions}</span>
+      <span className="ml-auto text-gray-500">
+        Undo: {history.length} | Redo: {future.length}
+      </span>
     </footer>
   );
 });
