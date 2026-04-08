@@ -28,21 +28,23 @@ function WalkthroughControls() {
     const onKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       if (['w', 'a', 's', 'd', 'q', 'e'].includes(key)) {
-        e.preventDefault();
-        e.stopPropagation();
         keysPressed.add(key);
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       keysPressed.delete(e.key.toLowerCase());
     };
+    const onBlur = () => {
+      keysPressed.clear();
+    };
 
-    // Use capture phase to intercept WASD before the keyboard shortcuts hook
-    window.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('keyup', onKeyUp, true);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     return () => {
-      window.removeEventListener('keydown', onKeyDown, true);
-      window.removeEventListener('keyup', onKeyUp, true);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
       keysPressed.clear();
     };
   }, [camera]);

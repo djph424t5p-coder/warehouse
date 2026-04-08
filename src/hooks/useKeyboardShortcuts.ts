@@ -24,6 +24,11 @@ export function useKeyboardShortcuts() {
 
       const store = useStore.getState();
 
+      // In walkthrough mode, let WASD/QE through without interference
+      if (store.walkthrough && ['w','a','s','d','q','e'].includes(e.key.toLowerCase()) && !e.ctrlKey && !e.metaKey) {
+        return;
+      }
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (store.selectedIds.length > 0) {
           e.preventDefault();
