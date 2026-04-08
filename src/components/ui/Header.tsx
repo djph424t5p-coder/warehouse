@@ -36,7 +36,13 @@ export const Header: React.FC = React.memo(() => {
           2D
         </button>
         <button
-          onClick={() => setMode('3d')}
+          onClick={() => {
+            setMode('3d');
+            const tool = useStore.getState().tool;
+            if (tool === 'wall' || tool === 'measure') {
+              useStore.getState().setTool('select');
+            }
+          }}
           className={`px-3 py-1 rounded text-sm ${
             mode === '3d' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'
           }`}

@@ -3,7 +3,8 @@ import { useStore } from '../../store/useStore';
 import { TOOL_LABELS, TOOL_ICONS } from '../../utils/defaults';
 import type { Tool, ObjectType } from '../../types';
 
-const TOOLS: Tool[] = ['select', 'wall', 'rack', 'pallet', 'zone', 'column', 'door', 'dock', 'measure'];
+const TOOLS_2D: Tool[] = ['select', 'wall', 'rack', 'pallet', 'zone', 'column', 'door', 'dock', 'measure'];
+const TOOLS_3D: Tool[] = ['select', 'rack', 'pallet', 'zone', 'column', 'door', 'dock'];
 
 const TYPE_LABELS: Record<ObjectType, string> = {
   wall: 'Стены',
@@ -52,11 +53,10 @@ export const LeftSidebar: React.FC = React.memo(() => {
         </button>
       </div>
 
-      {mode === '2d' && (
-        <div className="p-2 border-b border-gray-300">
-          <div className="text-xs text-gray-500 mb-1 font-semibold">Инструменты</div>
-          <div className="grid grid-cols-3 gap-1">
-            {TOOLS.map((t) => (
+      <div className="p-2 border-b border-gray-300">
+        <div className="text-xs text-gray-500 mb-1 font-semibold">Инструменты</div>
+        <div className="grid grid-cols-3 gap-1">
+          {(mode === '2d' ? TOOLS_2D : TOOLS_3D).map((t) => (
               <button
                 key={t}
                 onClick={() => setTool(t)}
@@ -96,7 +96,6 @@ export const LeftSidebar: React.FC = React.memo(() => {
             </select>
           </div>
         </div>
-      )}
 
       <div className="flex-1 overflow-y-auto p-2">
         <div className="text-xs text-gray-500 mb-1 font-semibold">Объекты</div>
