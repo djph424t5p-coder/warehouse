@@ -3,6 +3,7 @@ import { Header } from './components/ui/Header';
 import { LeftSidebar } from './components/ui/LeftSidebar';
 import { PropertiesPanel } from './components/ui/PropertiesPanel';
 import { Footer } from './components/ui/Footer';
+import { StatsPanel } from './components/ui/StatsPanel';
 import { Canvas2D } from './components/2d/Canvas2D';
 import { Scene3D } from './components/3d/Scene3D';
 import { useStore } from './store/useStore';
@@ -38,6 +39,7 @@ function App() {
         <PropertiesPanel />
       </div>
       <Footer />
+      <StatsPanel />
     </div>
   );
 }

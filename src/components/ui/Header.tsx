@@ -61,7 +61,7 @@ export const Header: React.FC = React.memo(() => {
           onClick={() => {
             setMode('3d');
             const tool = useStore.getState().tool;
-            if (tool === 'wall' || tool === 'measure') useStore.getState().setTool('select');
+            if (tool === 'wall' || tool === 'measure' || tool === 'path') useStore.getState().setTool('select');
           }}
           className={`px-3 py-1 rounded text-sm ${mode === '3d' ? 'bg-blue-600' : 'bg-gray-600 hover:bg-gray-500'}`}
         >3D</button>
@@ -73,6 +73,12 @@ export const Header: React.FC = React.memo(() => {
           >🚶</button>
         )}
       </div>
+
+      <button
+        onClick={() => useStore.getState().setShowStats(!useStore.getState().showStats)}
+        className="px-2 py-1 rounded text-sm bg-gray-600 hover:bg-gray-500"
+        title="Статистика склада"
+      >📊</button>
 
       <button
         onClick={() => setShowCollisions(!showCollisions)}

@@ -3,11 +3,11 @@ import { useStore } from '../../store/useStore';
 import { TOOL_LABELS, TOOL_ICONS } from '../../utils/defaults';
 import type { Tool, ObjectType } from '../../types';
 
-const TOOLS_2D: Tool[] = ['select', 'wall', 'rack', 'pallet', 'zone', 'column', 'door', 'dock', 'measure'];
+const TOOLS_2D: Tool[] = ['select', 'wall', 'rack', 'pallet', 'zone', 'column', 'door', 'dock', 'measure', 'path'];
 const TOOLS_3D: Tool[] = ['select', 'rack', 'pallet', 'zone', 'column', 'door', 'dock'];
 
 const TOOL_SHORTCUTS: Record<string, string> = {
-  select: '1', wall: '2', rack: '3', pallet: '4', zone: '5', column: '6', door: '7', dock: '8', measure: '9',
+  select: '1', wall: '2', rack: '3', pallet: '4', zone: '5', column: '6', door: '7', dock: '8', measure: '9', path: '0',
 };
 
 const TYPE_LABELS: Record<ObjectType, string> = {

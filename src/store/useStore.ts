@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import type { WarehouseObject, Tool, EditorMode, Annotation } from '../types';
 import { saveToLocalStorage, loadFromLocalStorage } from '../utils/saveLoad';
+import { findPath, type PathPoint } from '../utils/pathfinding';
 
 const MAX_HISTORY = 50;
 
@@ -27,6 +28,9 @@ interface WarehouseState {
   activeLayer: string;
   walkthrough: boolean;
   showCollisions: boolean;
+  pathPoints: MeasurePoint[];
+  computedPath: PathPoint[] | null;
+  showStats: boolean;
 
   addObject: (obj: WarehouseObject) => void;
   updateObject: (id: string, changes: Partial<WarehouseObject>) => void;
@@ -65,6 +69,10 @@ interface WarehouseState {
 
   setWalkthrough: (on: boolean) => void;
   setShowCollisions: (on: boolean) => void;
+  setShowStats: (on: boolean) => void;
+
+  addPathPoint: (point: MeasurePoint) => void;
+  clearPath: () => void;
 
   alignObjects: (ids: string[], alignment: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => void;
   distributeObjects: (ids: string[], axis: 'horizontal' | 'vertical') => void;
@@ -104,6 +112,9 @@ export const useStore = create<WarehouseState>((set, get) => ({
   activeLayer: 'default',
   walkthrough: false,
   showCollisions: false,
+  pathPoints: [],
+  computedPath: null,
+  showStats: false,
 
   saveSnapshot: () => {
     const { objects, history } = get();
@@ -293,6 +304,21 @@ export const useStore = create<WarehouseState>((set, get) => ({
 
   setWalkthrough: (on) => set({ walkthrough: on }),
   setShowCollisions: (on) => set({ showCollisions: on }),
+  setShowStats: (on) => set({ showStats: on }),
+
+  addPathPoint: (point) => {
+    const { pathPoints, objects } = get();
+    if (pathPoints.length >= 2) {
+      set({ pathPoints: [point], computedPath: null });
+    } else if (pathPoints.length === 1) {
+      const newPoints = [...pathPoints, point];
+      const path = findPath(pathPoints[0].x, pathPoints[0].y, point.x, point.y, objects);
+      set({ pathPoints: newPoints, computedPath: path });
+    } else {
+      set({ pathPoints: [point], computedPath: null });
+    }
+  },
+  clearPath: () => set({ pathPoints: [], computedPath: null }),
 
   alignObjects: (ids, alignment) => {
     const objs = get().objects.filter((o) => ids.includes(o.id) && !o.locked);

@@ -2,6 +2,7 @@ import React from 'react';
 import { useStore } from '../../store/useStore';
 import { TOOL_LABELS } from '../../utils/defaults';
 import { checkCollisions } from '../../utils/collision';
+import type { WarehouseObject } from '../../types';
 
 export const PropertiesPanel: React.FC = React.memo(() => {
   const selectedIds = useStore((s) => s.selectedIds);
@@ -66,6 +67,11 @@ export const PropertiesPanel: React.FC = React.memo(() => {
             : `${TOOL_LABELS[obj.type]} (${obj.id.slice(0, 8)})`}
         </div>
 
+        {/* Distance between 2 objects */}
+        {selectedObjects.length === 2 && (
+          <DistanceInfo obj1={selectedObjects[0]} obj2={selectedObjects[1]} />
+        )}
+
         {/* Lock controls */}
         <div className="flex gap-1">
           {selectedObjects.some((o) => !o.locked) && (
@@ -123,16 +129,19 @@ export const PropertiesPanel: React.FC = React.memo(() => {
               </select>
             </div>
             {obj.type === 'rack' && (
-              <NumberField
-                label="Уровни"
-                value={obj.metadata?.levels ?? 4}
-                onChange={(v) => {
-                  const val = parseInt(v);
-                  if (!isNaN(val) && val > 0) {
-                    updateObject(obj.id, { metadata: { ...obj.metadata, levels: val } });
-                  }
-                }}
-              />
+              <>
+                <NumberField
+                  label="Уровни"
+                  value={obj.metadata?.levels ?? 4}
+                  onChange={(v) => {
+                    const val = parseInt(v);
+                    if (!isNaN(val) && val > 0) {
+                      updateObject(obj.id, { metadata: { ...obj.metadata, levels: val } });
+                    }
+                  }}
+                />
+                <RackSlotEditor obj={obj} updateObject={updateObject} />
+              </>
             )}
             {showCollisions && collisions.length > 0 && (
               <div className="p-2 bg-red-50 border border-red-200 rounded">
@@ -169,6 +178,89 @@ function NumberField({ label, value, onChange }: { label: string; value: number;
         onChange={(e) => onChange(e.target.value)}
         className="w-full text-xs px-2 py-1 border border-gray-300 rounded bg-white"
       />
+    </div>
+  );
+}
+
+function RackSlotEditor({ obj, updateObject }: { obj: WarehouseObject; updateObject: (id: string, changes: Partial<WarehouseObject>) => void }) {
+  const levels = obj.metadata?.levels ?? 4;
+  const positionsPerLevel = 3;
+  const slots: boolean[][] = obj.metadata?.slots ?? Array.from({ length: levels }, () => Array(positionsPerLevel).fill(false));
+
+  const toggleSlot = (level: number, pos: number) => {
+    const newSlots = slots.map((row, i) =>
+      i === level ? row.map((v, j) => (j === pos ? !v : v)) : [...row]
+    );
+    // Ensure correct array size
+    while (newSlots.length < levels) newSlots.push(Array(positionsPerLevel).fill(false));
+    updateObject(obj.id, { metadata: { ...obj.metadata, slots: newSlots } });
+  };
+
+  const fillAll = () => {
+    const newSlots = Array.from({ length: levels }, () => Array(positionsPerLevel).fill(true));
+    updateObject(obj.id, { metadata: { ...obj.metadata, slots: newSlots } });
+  };
+
+  const clearAll = () => {
+    const newSlots = Array.from({ length: levels }, () => Array(positionsPerLevel).fill(false));
+    updateObject(obj.id, { metadata: { ...obj.metadata, slots: newSlots } });
+  };
+
+  const occupied = slots.flat().filter(Boolean).length;
+  const total = levels * positionsPerLevel;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-xs text-gray-500">Паллеты ({occupied}/{total})</label>
+        <div className="flex gap-1">
+          <button onClick={fillAll} className="text-xs px-1 bg-green-100 border border-green-300 rounded hover:bg-green-200">Все</button>
+          <button onClick={clearAll} className="text-xs px-1 bg-red-100 border border-red-300 rounded hover:bg-red-200">Очист</button>
+        </div>
+      </div>
+      <div className="flex flex-col-reverse gap-0.5">
+        {Array.from({ length: levels }, (_, levelIdx) => (
+          <div key={levelIdx} className="flex gap-0.5 items-center">
+            <span className="text-xs text-gray-400 w-4">{levelIdx + 1}</span>
+            {Array.from({ length: positionsPerLevel }, (_, posIdx) => {
+              const isOccupied = slots[levelIdx]?.[posIdx] ?? false;
+              return (
+                <button
+                  key={posIdx}
+                  onClick={() => toggleSlot(levelIdx, posIdx)}
+                  className={`flex-1 h-5 rounded text-xs ${
+                    isOccupied
+                      ? 'bg-amber-500 border border-amber-600'
+                      : 'bg-gray-200 border border-gray-300 hover:bg-gray-300'
+                  }`}
+                  title={`Уровень ${levelIdx + 1}, позиция ${posIdx + 1}`}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DistanceInfo({ obj1, obj2 }: { obj1: WarehouseObject; obj2: WarehouseObject }) {
+  const cDist = Math.sqrt((obj2.x - obj1.x) ** 2 + (obj2.y - obj1.y) ** 2);
+  const hGap = Math.max(
+    (obj2.x - obj2.width / 2) - (obj1.x + obj1.width / 2),
+    (obj1.x - obj1.width / 2) - (obj2.x + obj2.width / 2)
+  );
+  const vGap = Math.max(
+    (obj2.y - obj2.depth / 2) - (obj1.y + obj1.depth / 2),
+    (obj1.y - obj1.depth / 2) - (obj2.y + obj2.depth / 2)
+  );
+
+  return (
+    <div className="p-2 bg-orange-50 border border-orange-200 rounded text-xs space-y-0.5">
+      <div className="font-semibold text-orange-700">Расстояние</div>
+      <div>Центр↔Центр: <b>{cDist.toFixed(2)}м</b></div>
+      {hGap > 0 && <div>Зазор X: <b>{hGap.toFixed(2)}м</b></div>}
+      {vGap > 0 && <div>Зазор Y: <b>{vGap.toFixed(2)}м</b></div>}
     </div>
   );
 }

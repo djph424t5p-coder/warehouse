@@ -12,6 +12,7 @@ const TOOL_KEYS: Record<string, Tool> = {
   '7': 'door',
   '8': 'dock',
   '9': 'measure',
+  '0': 'path',
 };
 
 export function useKeyboardShortcuts() {
@@ -102,6 +103,7 @@ export function useKeyboardShortcuts() {
       if (e.key === 'Escape') {
         store.clearSelection();
         store.setTool('select');
+        store.clearPath();
         if (store.walkthrough) store.setWalkthrough(false);
         return;
       }

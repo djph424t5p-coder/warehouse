@@ -17,7 +17,7 @@ export interface WarehouseObject {
   layer?: string;
 }
 
-export type Tool = 'select' | 'wall' | 'rack' | 'pallet' | 'zone' | 'column' | 'door' | 'dock' | 'measure';
+export type Tool = 'select' | 'wall' | 'rack' | 'pallet' | 'zone' | 'column' | 'door' | 'dock' | 'measure' | 'path';
 
 export type EditorMode = '2d' | '3d';
 

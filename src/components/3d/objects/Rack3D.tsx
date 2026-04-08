@@ -9,21 +9,20 @@ interface Props {
 }
 
 const POST_SIZE = 0.05;
+const PALLET_W = 0.8;
+const PALLET_D = 0.6;
+const PALLET_H = 0.3;
 
 export const Rack3D: React.FC<Props> = React.memo(({ obj, selected, onClick }) => {
   const levels = obj.metadata?.levels ?? 4;
   const beamHeight = obj.metadata?.beamHeight ?? 0.15;
+  const slots: boolean[][] = obj.metadata?.slots ?? [];
   const rotation = (obj.rotation * Math.PI) / 180;
   const hw = obj.width / 2;
   const hd = obj.depth / 2;
+  const positionsPerLevel = 3;
 
-  const posts: [number, number][] = [
-    [-hw, -hd],
-    [hw, -hd],
-    [-hw, hd],
-    [hw, hd],
-  ];
-
+  const posts: [number, number][] = [[-hw, -hd], [hw, -hd], [-hw, hd], [hw, hd]];
   const levelHeight = obj.height / levels;
 
   return (
@@ -45,17 +44,14 @@ export const Rack3D: React.FC<Props> = React.memo(({ obj, selected, onClick }) =
         const y = i * levelHeight;
         return (
           <group key={`level-${i}`}>
-            {/* Front beam */}
             <mesh position={[0, y, -hd]} castShadow>
               <boxGeometry args={[obj.width, beamHeight, POST_SIZE]} />
               <meshStandardMaterial color={obj.color} />
             </mesh>
-            {/* Back beam */}
             <mesh position={[0, y, hd]} castShadow>
               <boxGeometry args={[obj.width, beamHeight, POST_SIZE]} />
               <meshStandardMaterial color={obj.color} />
             </mesh>
-            {/* Shelf surface (except top) */}
             {i < levels && i > 0 && (
               <mesh position={[0, y + beamHeight / 2, 0]} receiveShadow>
                 <boxGeometry args={[obj.width - POST_SIZE * 2, 0.02, obj.depth - POST_SIZE * 2]} />
@@ -65,6 +61,22 @@ export const Rack3D: React.FC<Props> = React.memo(({ obj, selected, onClick }) =
           </group>
         );
       })}
+
+      {/* Pallets at occupied slots */}
+      {slots.map((levelSlots, levelIdx) =>
+        levelSlots.map((occupied, slotIdx) => {
+          if (!occupied) return null;
+          const y = (levelIdx + 1) * levelHeight + beamHeight / 2 + PALLET_H / 2;
+          const slotWidth = obj.width / positionsPerLevel;
+          const x = -hw + slotWidth * (slotIdx + 0.5);
+          return (
+            <mesh key={`pallet-${levelIdx}-${slotIdx}`} position={[x, y, 0]} castShadow>
+              <boxGeometry args={[PALLET_W, PALLET_H, PALLET_D]} />
+              <meshStandardMaterial color="#CC8844" />
+            </mesh>
+          );
+        })
+      )}
 
       {selected && (
         <mesh position={[0, obj.height / 2, 0]}>

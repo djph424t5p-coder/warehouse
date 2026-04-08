@@ -89,6 +89,7 @@ export const TOOL_LABELS: Record<string, string> = {
   door: 'Дверь',
   dock: 'Док',
   measure: 'Измерение',
+  path: 'Маршрут',
 };
 
 export const TOOL_ICONS: Record<string, string> = {
@@ -101,4 +102,5 @@ export const TOOL_ICONS: Record<string, string> = {
   door: '🚪',
   dock: '▥',
   measure: '📏',
+  path: '🚛',
 };

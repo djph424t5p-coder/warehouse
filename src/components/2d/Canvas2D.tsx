@@ -21,6 +21,7 @@ const CURSOR_MAP: Record<string, string> = {
   door: 'copy',
   dock: 'copy',
   measure: 'crosshair',
+  path: 'crosshair',
 };
 
 interface DragState {
@@ -54,6 +55,8 @@ export const Canvas2D: React.FC = () => {
   const annotations = useStore((s) => s.annotations);
   const showCollisions = useStore((s) => s.showCollisions);
   const layers = useStore((s) => s.layers);
+  const pathPoints = useStore((s) => s.pathPoints);
+  const computedPath = useStore((s) => s.computedPath);
 
   void _tool;
   void _snap;
@@ -238,9 +241,57 @@ export const Canvas2D: React.FC = () => {
       }
     }
 
+    // Path visualization
+    if (pathPoints.length > 0) {
+      for (const pp of pathPoints) {
+        const sx = pp.x * zoom + offset.x;
+        const sy = pp.y * zoom + offset.y;
+        ctx.fillStyle = '#00aa44';
+        ctx.beginPath();
+        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+    if (computedPath && computedPath.length >= 2) {
+      ctx.strokeStyle = '#00aa44';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([8, 4]);
+      ctx.beginPath();
+      ctx.moveTo(computedPath[0].x * zoom + offset.x, computedPath[0].y * zoom + offset.y);
+      for (let i = 1; i < computedPath.length; i++) {
+        ctx.lineTo(computedPath[i].x * zoom + offset.x, computedPath[i].y * zoom + offset.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Path length
+      let totalLen = 0;
+      for (let i = 1; i < computedPath.length; i++) {
+        totalLen += Math.sqrt((computedPath[i].x - computedPath[i - 1].x) ** 2 + (computedPath[i].y - computedPath[i - 1].y) ** 2);
+      }
+      const midIdx = Math.floor(computedPath.length / 2);
+      const mx = computedPath[midIdx].x * zoom + offset.x;
+      const my = computedPath[midIdx].y * zoom + offset.y;
+      ctx.fillStyle = '#00aa44';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${totalLen.toFixed(1)}м`, mx, my - 10);
+    }
+
+    // Distance labels between 2 selected objects
+    if (selectedIds.length === 2) {
+      const obj1 = visibleObjects.find((o) => o.id === selectedIds[0]);
+      const obj2 = visibleObjects.find((o) => o.id === selectedIds[1]);
+      if (obj1 && obj2) {
+        drawDistanceLabel(ctx, obj1, obj2, offset, zoom);
+      }
+    }
+
     // Ruler overlay
     drawRulers(ctx, w, h, offset, zoom);
-  }, [objects, selectedIds, offset, zoom, gridSize, selectionBox, wallPreview, measurePoints, ghostPos, annotations, showCollisions, layers]);
+  }, [objects, selectedIds, offset, zoom, gridSize, selectionBox, wallPreview, measurePoints, ghostPos, annotations, showCollisions, layers, pathPoints, computedPath]);
 
   // Resize
   useEffect(() => {
@@ -296,6 +347,12 @@ export const Canvas2D: React.FC = () => {
       if (store.tool === 'measure') {
         const snapped = snapPosition(world.x, world.y, store.gridSize, store.snapToGrid);
         store.addMeasurePoint(snapped);
+        return;
+      }
+
+      if (store.tool === 'path') {
+        const snapped = snapPosition(world.x, world.y, store.gridSize, store.snapToGrid);
+        store.addPathPoint(snapped);
         return;
       }
 
@@ -378,7 +435,7 @@ export const Canvas2D: React.FC = () => {
 
       // Ghost preview position
       const store = useStore.getState();
-      if (store.tool !== 'select' && store.tool !== 'measure' && store.tool !== 'wall' && dragRef.current.type === 'none') {
+      if (store.tool !== 'select' && store.tool !== 'measure' && store.tool !== 'wall' && store.tool !== 'path' && dragRef.current.type === 'none') {
         setGhostPos(world);
       } else if (ghostPos !== null && (store.tool === 'select' || store.tool === 'measure')) {
         setGhostPos(null);
@@ -732,4 +789,53 @@ function drawRulers(
   ctx.fillRect(0, 0, rulerH, rulerH);
   ctx.strokeStyle = '#ccc';
   ctx.strokeRect(0, 0, rulerH, rulerH);
+}
+
+function drawDistanceLabel(
+  ctx: CanvasRenderingContext2D,
+  obj1: WarehouseObject, obj2: WarehouseObject,
+  offset: { x: number; y: number }, zoom: number
+) {
+  // Compute edge-to-edge distances
+  const r1 = { l: obj1.x - obj1.width / 2, r: obj1.x + obj1.width / 2, t: obj1.y - obj1.depth / 2, b: obj1.y + obj1.depth / 2 };
+  const r2 = { l: obj2.x - obj2.width / 2, r: obj2.x + obj2.width / 2, t: obj2.y - obj2.depth / 2, b: obj2.y + obj2.depth / 2 };
+
+  // Horizontal gap
+  const hGap = Math.max(r2.l - r1.r, r1.l - r2.r);
+  // Vertical gap
+  const vGap = Math.max(r2.t - r1.b, r1.t - r2.b);
+  // Center-to-center distance
+  const cDist = Math.sqrt((obj2.x - obj1.x) ** 2 + (obj2.y - obj1.y) ** 2);
+
+  const cx1 = obj1.x * zoom + offset.x;
+  const cy1 = obj1.y * zoom + offset.y;
+  const cx2 = obj2.x * zoom + offset.x;
+  const cy2 = obj2.y * zoom + offset.y;
+
+  // Draw connecting line
+  ctx.strokeStyle = '#ff6600';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(cx1, cy1);
+  ctx.lineTo(cx2, cy2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Label
+  const mx = (cx1 + cx2) / 2;
+  const my = (cx1 === cx2 ? (cy1 + cy2) / 2 : (cy1 + cy2) / 2) - 14;
+
+  ctx.fillStyle = '#ff6600';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+
+  const labels: string[] = [`↔ ${cDist.toFixed(2)}м`];
+  if (hGap > 0) labels.push(`зазор X: ${hGap.toFixed(2)}м`);
+  if (vGap > 0) labels.push(`зазор Y: ${vGap.toFixed(2)}м`);
+
+  labels.forEach((lbl, i) => {
+    ctx.fillText(lbl, mx, my - i * 14);
+  });
 }
