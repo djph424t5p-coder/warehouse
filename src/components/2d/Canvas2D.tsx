@@ -18,6 +18,7 @@ interface DragState {
   shiftConstrain?: 'x' | 'y' | null;
   resizeHandle?: ResizeHandle;
   resizeObj?: WarehouseObject;
+  rightClickMoved?: boolean;
 }
 
 export const Canvas2D: React.FC = () => {
@@ -231,8 +232,21 @@ export const Canvas2D: React.FC = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (e.button === 2) return; // right-click handled by contextmenu
       setContextMenu(null);
+
+      // Right-click: start panning
+      if (e.button === 2) {
+        e.preventDefault();
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        dragRef.current = {
+          type: 'pan',
+          startScreen: { x: e.clientX - rect.left, y: e.clientY - rect.top },
+          startWorld: { x: 0, y: 0 },
+          rightClickMoved: false,
+        };
+        return;
+      }
 
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -340,9 +354,14 @@ export const Canvas2D: React.FC = () => {
       const drag = dragRef.current;
 
       if (drag.type === 'pan') {
+        const dx = sx - drag.startScreen.x;
+        const dy = sy - drag.startScreen.y;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+          drag.rightClickMoved = true;
+        }
         setOffset({
-          x: offset.x + (sx - drag.startScreen.x),
-          y: offset.y + (sy - drag.startScreen.y),
+          x: offset.x + dx,
+          y: offset.y + dy,
         });
         drag.startScreen = { x: sx, y: sy };
         return;
@@ -499,7 +518,7 @@ export const Canvas2D: React.FC = () => {
       if (len > 0.1) {
         const cx = (x1 + x2) / 2;
         const cy = (y1 + y2) / 2;
-        const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+        const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI - 90;
         const wall = createObject('wall', cx, cy, {
           depth: Math.round(len * 10) / 10,
           rotation: angle,
@@ -514,25 +533,18 @@ export const Canvas2D: React.FC = () => {
     dragRef.current = { type: 'none', startScreen: { x: 0, y: 0 }, startWorld: { x: 0, y: 0 } };
   }, [selectionBox, wallPreview]);
 
-  const handleMiddleDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button === 1) {
-        e.preventDefault();
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        dragRef.current = {
-          type: 'pan',
-          startScreen: { x: e.clientX - rect.left, y: e.clientY - rect.top },
-          startWorld: { x: 0, y: 0 },
-        };
-      }
-    },
-    []
-  );
-
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      const drag = dragRef.current;
+
+      // If we were panning with right-click, don't show context menu
+      if (drag.type === 'pan' && drag.rightClickMoved) {
+        dragRef.current = { type: 'none', startScreen: { x: 0, y: 0 }, startWorld: { x: 0, y: 0 } };
+        return;
+      }
+      dragRef.current = { type: 'none', startScreen: { x: 0, y: 0 }, startWorld: { x: 0, y: 0 } };
+
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
       const world = toWorld(e.clientX - rect.left, e.clientY - rect.top);
@@ -556,8 +568,18 @@ export const Canvas2D: React.FC = () => {
         className="w-full h-full block"
         onWheel={handleWheel}
         onMouseDown={(e) => {
-          if (e.button === 1) handleMiddleDown(e);
-          else handleMouseDown(e);
+          if (e.button === 1) {
+            e.preventDefault();
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            dragRef.current = {
+              type: 'pan',
+              startScreen: { x: e.clientX - rect.left, y: e.clientY - rect.top },
+              startWorld: { x: 0, y: 0 },
+            };
+          } else {
+            handleMouseDown(e);
+          }
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

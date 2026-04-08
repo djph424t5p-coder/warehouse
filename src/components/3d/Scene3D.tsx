@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import { ObjectMapper } from './ObjectMapper';
+import { GroundPlane } from './GroundPlane';
 import { useStore } from '../../store/useStore';
 
 export const Scene3D: React.FC = () => {
@@ -30,11 +31,8 @@ export const Scene3D: React.FC = () => {
             shadow-camera-bottom={-50}
           />
 
-          {/* Ground */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-            <planeGeometry args={[200, 200]} />
-            <meshStandardMaterial color="#e0e0e0" />
-          </mesh>
+          {/* Ground with click-to-place */}
+          <GroundPlane />
 
           {/* Grid */}
           <Grid
