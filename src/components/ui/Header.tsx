@@ -70,7 +70,7 @@ export const Header: React.FC = React.memo(() => {
             onClick={() => setWalkthrough(!walkthrough)}
             className={`px-3 py-1 rounded text-sm ${walkthrough ? 'bg-purple-600' : 'bg-gray-600 hover:bg-gray-500'}`}
             title="Режим от первого лица (WASD)"
-          >🚶</button>
+          >Обход</button>
         )}
       </div>
 
@@ -78,7 +78,7 @@ export const Header: React.FC = React.memo(() => {
         onClick={() => useStore.getState().setShowStats(!useStore.getState().showStats)}
         className="px-2 py-1 rounded text-sm bg-gray-600 hover:bg-gray-500"
         title="Статистика склада"
-      >📊</button>
+      >Статистика</button>
 
       <button
         onClick={() => setShowCollisions(!showCollisions)}
@@ -112,15 +112,15 @@ export const Header: React.FC = React.memo(() => {
           )}
         </div>
 
-        <button onClick={handleScreenshot} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-sm">📷 PNG</button>
-        <button onClick={handleShareLink} className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-sm">🔗 Поделиться</button>
-        <button onClick={() => exportToJSON(objects)} className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm">💾 JSON</button>
-        <button onClick={() => fileRef.current?.click()} className="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm">📂 Загрузить</button>
+        <button onClick={handleScreenshot} className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-sm">PNG</button>
+        <button onClick={handleShareLink} className="px-3 py-1 bg-teal-600 hover:bg-teal-500 rounded text-sm">Поделиться</button>
+        <button onClick={() => exportToJSON(objects)} className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm">Сохранить</button>
+        <button onClick={() => fileRef.current?.click()} className="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm">Загрузить</button>
         <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
         <button
           onClick={() => { if (confirm('Очистить все объекты?')) clearAll(); }}
           className="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-sm"
-        >🗑 Очистить</button>
+        >Очистить</button>
       </div>
     </header>
   );

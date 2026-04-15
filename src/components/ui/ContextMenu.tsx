@@ -52,12 +52,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = React.memo(({ x, y, onClo
         <button
           className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 text-gray-700"
           onClick={(e) => { e.stopPropagation(); unlockObjects(selectedIds); onClose(); }}
-        >🔓 Разблокировать <span className="text-gray-400 text-xs ml-2">Ctrl+L</span></button>
+        >Разблокировать <span className="text-gray-400 text-xs ml-2">Ctrl+L</span></button>
       ) : (
         <button
           className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 text-gray-700"
           onClick={(e) => { e.stopPropagation(); lockObjects(selectedIds); onClose(); }}
-        >🔒 Заблокировать <span className="text-gray-400 text-xs ml-2">Ctrl+L</span></button>
+        >Заблокировать <span className="text-gray-400 text-xs ml-2">Ctrl+L</span></button>
       )}
 
       <button
@@ -71,13 +71,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = React.memo(({ x, y, onClo
           }
           onClose();
         }}
-      >📝 Добавить аннотацию</button>
+      >Добавить аннотацию</button>
 
       {allRacks && selectedIds.length >= 2 && (
         <button
           className="w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 text-gray-700"
           onClick={(e) => { e.stopPropagation(); generateAisles(selectedIds, 3); onClose(); }}
-        >🔀 Создать проходы</button>
+        >Создать проходы</button>
       )}
 
       <hr className="my-1 border-gray-200" />

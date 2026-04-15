@@ -78,13 +78,13 @@ export const PropertiesPanel: React.FC = React.memo(() => {
             <button
               onClick={() => lockObjects(selectedIds)}
               className="flex-1 text-xs px-2 py-1 bg-yellow-100 border border-yellow-300 rounded hover:bg-yellow-200"
-            >🔒 Заблокировать</button>
+            >Заблокировать</button>
           )}
           {selectedObjects.some((o) => o.locked) && (
             <button
               onClick={() => unlockObjects(selectedIds)}
               className="flex-1 text-xs px-2 py-1 bg-green-100 border border-green-300 rounded hover:bg-green-200"
-            >🔓 Разблокировать</button>
+            >Разблокировать</button>
           )}
         </div>
 

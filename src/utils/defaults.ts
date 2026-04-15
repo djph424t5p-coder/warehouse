@@ -99,8 +99,8 @@ export const TOOL_ICONS: Record<string, string> = {
   pallet: '▤',
   zone: '◻',
   column: '◼',
-  door: '🚪',
+  door: '▯',
   dock: '▥',
-  measure: '📏',
-  path: '🚛',
+  measure: '⤢',
+  path: '⇝',
 };

@@ -47,7 +47,7 @@ export const StatsPanel: React.FC = React.memo(() => {
   return (
     <div className="fixed right-64 top-14 w-72 bg-white border border-gray-300 rounded-lg shadow-xl z-50 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
-        <span className="text-sm font-bold text-gray-700">📊 Статистика склада</span>
+        <span className="text-sm font-bold text-gray-700">Статистика склада</span>
         <button onClick={() => setShowStats(false)} className="text-gray-400 hover:text-gray-700">✕</button>
       </div>
 

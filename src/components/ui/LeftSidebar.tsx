@@ -148,7 +148,7 @@ export const LeftSidebar: React.FC = React.memo(() => {
               className="w-4 text-center"
               title={layer.visible ? 'Скрыть' : 'Показать'}
             >
-              {layer.visible ? '👁' : '—'}
+              {layer.visible ? '◉' : '○'}
             </button>
             <button
               onClick={() => setActiveLayer(layer.name)}
@@ -199,7 +199,7 @@ export const LeftSidebar: React.FC = React.memo(() => {
                 }`}
                 style={{ borderLeft: `3px solid ${obj.color}` }}
               >
-                {obj.locked ? '🔒 ' : ''}{obj.label || `${TOOL_LABELS[obj.type]} ${obj.id.slice(0, 4)}`}
+                {obj.locked ? '[L] ' : ''}{obj.label || `${TOOL_LABELS[obj.type]} ${obj.id.slice(0, 4)}`}
               </button>
             ))}
           </div>
