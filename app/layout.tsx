@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Playfair_Display } from "next/font/google";
+import Providers from "@/components/providers/Providers";
+import Cursor from "@/components/ui/Cursor";
+import GrainOverlay from "@/components/ui/GrainOverlay";
+import Nav from "@/components/ui/Nav";
 import "./globals.css";
 
 /*
@@ -42,7 +46,12 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <body className={`${playfair.variable} ${manrope.variable}`}>
-        {children}
+        <Providers>
+          <Nav />
+          {children}
+        </Providers>
+        <GrainOverlay />
+        <Cursor />
       </body>
     </html>
   );

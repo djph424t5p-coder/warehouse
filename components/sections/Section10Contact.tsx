@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import MagneticButton from "@/components/ui/MagneticButton";
 import SectionHeading from "@/components/ui/SectionHeading";
 import { CONTACT, PROJECT } from "@/lib/constants";
 
@@ -114,15 +115,9 @@ export default function Section10Contact() {
                   </select>
                 </div>
 
-                {/* TODO(M2): обернуть в MagneticButton */}
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  data-cursor="hover"
-                  className="kicker mt-4 inline-flex items-center gap-4 border border-brass/40 px-10 py-5 text-bone transition-colors duration-500 hover:border-brass hover:text-brass"
-                >
+                <MagneticButton onClick={handleSubmit} className="mt-4">
                   Запросить презентацию
-                </button>
+                </MagneticButton>
               </div>
             )}
           </div>

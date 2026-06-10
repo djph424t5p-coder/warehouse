@@ -1,3 +1,4 @@
+import Reveal from "@/components/ui/Reveal";
 import { CONCEPT } from "@/lib/constants";
 
 export default function Section2Concept() {
@@ -6,19 +7,25 @@ export default function Section2Concept() {
       <div className="container-luxe">
         <p className="kicker">{CONCEPT.kicker}</p>
 
-        <h2 className="display-1 mt-10 text-forest">
+        <Reveal as="h2" className="display-1 mt-10 text-forest">
           {CONCEPT.manifest.map((line) => (
             <span key={line} className="block">
               {line}
             </span>
           ))}
-        </h2>
+        </Reveal>
 
         <div className="mt-20 grid gap-12 md:grid-cols-2">
-          {CONCEPT.body.map((paragraph) => (
-            <p key={paragraph.slice(0, 24)} className="text-stone">
+          {CONCEPT.body.map((paragraph, index) => (
+            <Reveal
+              as="p"
+              mode="block"
+              delay={index * 0.12}
+              key={paragraph.slice(0, 24)}
+              className="text-stone"
+            >
               {paragraph}
-            </p>
+            </Reveal>
           ))}
         </div>
 

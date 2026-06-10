@@ -46,6 +46,12 @@
     outline: 1px solid var(--color-brass);
     outline-offset: 4px;
   }
+
+  /* Нативный курсор скрыт, когда активен кастомный */
+  html.cursor-hidden,
+  html.cursor-hidden * {
+    cursor: none !important;
+  }
 }
 
 /* Контентный контейнер: max-width 1320 + щедрые поля */
