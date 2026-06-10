@@ -7,10 +7,8 @@ import { createStore } from "zustand/vanilla";
 */
 export const scrollStore = createStore<{
   heroProgress: number;
-  heroActive: boolean;
 }>(() => ({
   heroProgress: 0,
-  heroActive: true,
 }));
 
 export type AppPhase = "loading" | "revealing" | "ready";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useGSAP } from "@gsap/react";
-import { useRef, type ElementType, type ReactNode } from "react";
+import { createElement, useRef, type ElementType, type ReactNode } from "react";
 import { EASE_LUXE, gsap, SplitText } from "@/lib/gsap";
 
 type RevealProps = {
@@ -69,9 +69,5 @@ export default function Reveal({
     { scope: ref, dependencies: [] },
   );
 
-  return (
-    <Tag ref={ref} className={className}>
-      {children}
-    </Tag>
-  );
+  return createElement(Tag, { ref, className }, children);
 }

@@ -9,6 +9,13 @@ const eslintConfig = [
   {
     ignores: [".next/**", "out/**", "node_modules/**", "next-env.d.ts"],
   },
+  {
+    /* JSX-пропсы React Three Fiber (args, attach, position…) */
+    files: ["components/three/**"],
+    rules: {
+      "react/no-unknown-property": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
