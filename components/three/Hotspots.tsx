@@ -20,7 +20,7 @@ export default function Hotspots() {
           <div className="group relative">
             <span
               aria-hidden="true"
-              className="absolute -inset-1.5 rounded-full border border-brass/40 [animation:ping_2.4s_cubic-bezier(0,0,0.2,1)_infinite]"
+              className="absolute -inset-1.5 rounded-full border border-brass/40 [animation:pulse-ring_2.4s_cubic-bezier(0,0,0.2,1)_infinite]"
             />
             <button
               type="button"
@@ -29,7 +29,7 @@ export default function Hotspots() {
               className="block h-3.5 w-3.5 rounded-full border border-brass bg-ink/70 transition-transform duration-300 group-hover:scale-150"
             />
 
-            <div className="pointer-events-none absolute top-1/2 left-7 w-60 -translate-y-1/2 border border-line bg-ink/95 p-5 opacity-0 backdrop-blur-sm transition-all duration-400 group-hover:translate-x-1 group-hover:opacity-100">
+            <div className="pointer-events-none absolute top-1/2 left-7 w-60 -translate-y-1/2 border border-line bg-ink/95 p-5 opacity-0 backdrop-blur-sm transition-all duration-500 group-hover:translate-x-1 group-hover:opacity-100">
               <p className="kicker tabular-nums">
                 {String(index + 1).padStart(2, "0")}
               </p>

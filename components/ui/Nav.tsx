@@ -2,6 +2,7 @@
 
 import { useLenis } from "@/hooks/useLenis";
 import { NAV_LINKS, PROJECT } from "@/lib/constants";
+import { useAppStore } from "@/lib/stores";
 
 /*
   Минималистичная фиксированная навигация.
@@ -9,6 +10,7 @@ import { NAV_LINKS, PROJECT } from "@/lib/constants";
 */
 export default function Nav() {
   const lenis = useLenis();
+  const phase = useAppStore((state) => state.phase);
 
   const scrollTo = (id: string) => (event: React.MouseEvent) => {
     event.preventDefault();
@@ -20,7 +22,11 @@ export default function Nav() {
   };
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 mix-blend-difference">
+    <nav
+      className={`fixed inset-x-0 top-0 z-50 mix-blend-difference transition-opacity duration-1000 ${
+        phase === "loading" ? "opacity-0" : "opacity-100"
+      }`}
+    >
       <div className="container-luxe flex items-center justify-between py-7">
         <a
           href="#hero"
@@ -38,7 +44,7 @@ export default function Nav() {
                 href={`#${link.id}`}
                 onClick={scrollTo(link.id)}
                 data-cursor="hover"
-                className="kicker !text-bone transition-opacity duration-300 hover:opacity-60"
+                className="kicker text-bone! transition-opacity duration-300 hover:opacity-60"
               >
                 {link.label}
               </a>
@@ -50,7 +56,7 @@ export default function Nav() {
           href="#contact"
           onClick={scrollTo("contact")}
           data-cursor="hover"
-          className="kicker hidden !text-bone underline decoration-bone/30 underline-offset-8 transition-colors duration-300 sm:block"
+          className="kicker hidden text-bone! underline decoration-bone/30 underline-offset-8 transition-colors duration-300 sm:block"
         >
           Запросить показ
         </a>
