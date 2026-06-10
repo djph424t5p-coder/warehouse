@@ -4,6 +4,7 @@ import Providers from "@/components/providers/Providers";
 import Cursor from "@/components/ui/Cursor";
 import GrainOverlay from "@/components/ui/GrainOverlay";
 import Nav from "@/components/ui/Nav";
+import Preloader from "@/components/ui/Preloader";
 import "./globals.css";
 
 /*
@@ -49,6 +50,7 @@ export default function RootLayout({
         <Providers>
           <Nav />
           {children}
+          <Preloader />
         </Providers>
         <GrainOverlay />
         <Cursor />

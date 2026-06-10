@@ -1,3 +1,4 @@
+import HeroReadySignal from "@/components/ui/HeroReadySignal";
 import { PROJECT } from "@/lib/constants";
 
 export default function Section1Hero() {
@@ -6,6 +7,7 @@ export default function Section1Hero() {
       id="hero"
       className="relative flex h-svh flex-col justify-end overflow-hidden"
     >
+      <HeroReadySignal />
       {/* TODO(M4): процедурная 3D-стройка (HeroCanvas) */}
       <div className="absolute inset-0 bg-gradient-to-b from-forest/40 via-ink to-ink" />
 
