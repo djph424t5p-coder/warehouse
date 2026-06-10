@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+/*
+  Дизайн-система: тёплая палитра, без чистых #000/#fff.
+  Латунь — дозированно, как ювелирная деталь.
+*/
+@theme {
+  --color-ink: #0e0d0b;
+  --color-bone: #f4efe6;
+  --color-brass: #b8975c;
+  --color-brass-soft: #c9ae80;
+  --color-forest: #1c2722;
+  --color-stone: #8a847a;
+  --color-line: rgb(184 151 92 / 0.2);
+
+  /* Дисплейный шрифт: Playfair Display (кириллица).
+     Замена на PP Editorial New / Canela — через эту переменную. */
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-body: var(--font-manrope), Arial, sans-serif;
+
+  --ease-luxe: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    /* Скроллом управляет Lenis */
+    scroll-behavior: auto;
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-bone);
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: var(--color-brass);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-brass);
+    outline-offset: 4px;
+  }
+}
+
+/* Контентный контейнер: max-width 1320 + щедрые поля */
+@utility container-luxe {
+  width: 100%;
+  max-width: calc(1320px + 2 * clamp(1.5rem, 7vw, 6rem));
+  margin-inline: auto;
+  padding-inline: clamp(1.5rem, 7vw, 6rem);
+}
+
+/* Надзаголовок-лейбл */
+@utility kicker {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--color-brass);
+}
+
+/* Дисплейная типографика */
+@utility display-hero {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.75rem, 8.5vw, 7.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+
+@utility display-1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.25rem, 5.5vw, 4.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+
+@utility display-2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.6rem, 3.2vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+/* Hairline-разделители */
+@utility hairline-t {
+  border-top: 1px solid var(--color-line);
+}
+
+@utility hairline-b {
+  border-bottom: 1px solid var(--color-line);
+}
+
+/* Вертикальный ритм секций */
+@utility section-pad {
+  padding-block: clamp(8.75rem, 14vw, 12.5rem);
+}
+
+/* Киношное зерно: анимация ступенчатого дрожания тайла */
+@keyframes grain-shift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-2%, 1.5%, 0);
+  }
+  50% {
+    transform: translate3d(1.5%, -2%, 0);
+  }
+  75% {
+    transform: translate3d(-1%, -1%, 0);
+  }
+  100% {
+    transform: translate3d(2%, 2%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
