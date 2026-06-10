@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 
@@ -7,7 +8,7 @@ import { SplitText } from "gsap/SplitText";
   Импортировать gsap только отсюда — никогда напрямую из "gsap".
 */
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger, SplitText);
+  gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
 }
 
 /* Фирменный ease: cubic-bezier(0.16,1,0.3,1) ≈ expo.out */

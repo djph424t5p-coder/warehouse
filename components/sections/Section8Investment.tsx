@@ -1,3 +1,6 @@
+import Counter from "@/components/ui/Counter";
+import PriceChart from "@/components/ui/PriceChart";
+import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
 import { INVESTMENT } from "@/lib/constants";
 
@@ -12,17 +15,23 @@ export default function Section8Investment() {
               title={INVESTMENT.title}
               className="[&_h2]:text-forest"
             />
-            <p className="mt-10 max-w-130 text-stone">{INVESTMENT.body}</p>
+            <Reveal as="p" mode="block" className="mt-10 max-w-130 text-stone">
+              {INVESTMENT.body}
+            </Reveal>
           </div>
 
-          {/* TODO(M11): анимированные счётчики + SVG-график с draw-анимацией */}
           <div>
             <dl className="grid gap-10 sm:grid-cols-3">
               {INVESTMENT.counters.map((counter) => (
                 <div key={counter.label}>
                   <dd className="display-2 tabular-nums text-forest">
-                    {counter.value}
-                    {counter.suffix}
+                    <Counter
+                      value={counter.value}
+                      suffix={counter.suffix}
+                      decimals={
+                        "decimals" in counter ? counter.decimals : 0
+                      }
+                    />
                   </dd>
                   <dt className="mt-2 text-sm text-stone">{counter.label}</dt>
                 </div>
@@ -31,7 +40,9 @@ export default function Section8Investment() {
 
             <div className="mt-16 hairline-t pt-10">
               <p className="kicker">Динамика цены м², индекс</p>
-              <div className="mt-6 aspect-[2/1] border border-forest/15" />
+              <div className="mt-6">
+                <PriceChart />
+              </div>
             </div>
           </div>
         </div>
