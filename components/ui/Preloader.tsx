@@ -18,7 +18,11 @@ const delay = (ms: number) =>
 const heroReadyPromise = () =>
   new Promise<void>((resolve) => {
     if (useAppStore.getState().heroReady) return resolve();
-    const timeout = setTimeout(resolve, HERO_TIMEOUT_MS);
+
+    const timeout = setTimeout(() => {
+      unsubscribe();
+      resolve();
+    }, HERO_TIMEOUT_MS);
     const unsubscribe = useAppStore.subscribe((state) => {
       if (state.heroReady) {
         clearTimeout(timeout);
@@ -138,7 +142,12 @@ export default function Preloader() {
         document.body.style.overflow = "";
       };
     },
-    { scope: rootRef, dependencies: [lenis] },
+    /*
+      revertOnUpdate: при появлении lenis (смена зависимости) первый запуск
+      полностью откатывается (cancelled = true), иначе счётчик и занавес
+      исполнялись бы дважды.
+    */
+    { scope: rootRef, dependencies: [lenis], revertOnUpdate: true },
   );
 
   if (phase === "ready") return null;
