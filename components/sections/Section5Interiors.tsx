@@ -78,14 +78,28 @@ export default function Section5Interiors() {
             key={slide.id}
             className="interior-slide relative flex min-h-[88svh] items-end overflow-hidden will-change-[clip-path]"
           >
+            {/*
+              Фото слоем поверх градиента: если картинка не загрузится,
+              остаётся аккуратный тёмный градиент (никаких битых иконок).
+            */}
             <div
-              className="interior-media absolute inset-0 will-change-transform"
-              style={{ background: PLACEHOLDER_BACKDROPS[index % 3] }}
+              role="img"
+              aria-label={slide.title}
+              className="interior-media absolute inset-0 bg-cover bg-center will-change-transform"
+              style={{
+                backgroundImage: `url("${slide.image}"), ${PLACEHOLDER_BACKDROPS[index % 3]}`,
+              }}
+            />
+
+            {/* затемнение для читаемости подписи и единства с тёмной темой */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/25"
             />
 
             <p
               aria-hidden="true"
-              className="absolute top-10 right-[6vw] font-display text-7xl text-bone/15 tabular-nums"
+              className="absolute top-10 right-[6vw] z-10 font-display text-7xl text-bone/20 tabular-nums"
             >
               {String(index + 1).padStart(2, "0")}
             </p>

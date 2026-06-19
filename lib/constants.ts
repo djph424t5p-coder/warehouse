@@ -127,21 +127,32 @@ export const RESIDENCES = {
 export const INTERIORS = {
   kicker: "Интерьеры",
   title: "Материя тишины",
+  /*
+    image — временные фото с Pexels (бесплатная лицензия, без атрибуции),
+    подгружаются в браузере. TODO: заменить на собственную лицензионную
+    съёмку интерьеров (положить в /public/assets/interiors/ и указать путь).
+  */
   slides: [
     {
       id: "marble",
       title: "Мрамор Calacatta Oro",
       text: "Каррарские карьеры. Каждый слэб отобран лично архитектором проекта",
+      image:
+        "https://images.pexels.com/photos/3847501/pexels-photo-3847501.jpeg?auto=compress&cs=tinysrgb&w=1920",
     },
     {
       id: "oak",
       title: "Дуб торцевой распиловки",
       text: "Палуба из французского дуба с латунной инкрустацией швов",
+      image:
+        "https://images.pexels.com/photos/131667/pexels-photo-131667.jpeg?auto=compress&cs=tinysrgb&w=1920",
     },
     {
       id: "brass",
       title: "Латунь ручной патины",
       text: "Фурнитура и профили — мануфактура с вековой историей",
+      image:
+        "https://images.pexels.com/photos/19141076/pexels-photo-19141076.jpeg?auto=compress&cs=tinysrgb&w=1920",
     },
   ],
 } as const;
